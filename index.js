@@ -1,8 +1,11 @@
 const EventEmitter = require('events')
+const names = require('./lib/names')
 
 class Emitter extends EventEmitter {}
 
-const emitter = new Emitter()[('search', 'choose', 'find', 'download')].forEach((key) => {
+const emitter = new Emitter()
+
+;['search', 'choose', 'find', 'download'].forEach((key) => {
   const fn = require(`./lib/${key}`)
   emitter.on(key, async function (...args) {
     const res = await fn(...args)
@@ -21,21 +24,29 @@ emitter.on('afterSearch', function (data, q) {
 })
 // 在歌曲被选中后，它回调里面继续触发 find 事件
 emitter.on('afterChoose', function (answers, songs) {
-  const [first] = songs.filter((song, i) => names(song, i) === answers.song)
-  if (first && first.id) {
-    this.emit('find', first, answers.song)
+  const [selectedSong] = songs.filter((song, i) => names(song, i) === answers.song)
+  if (selectedSong && selectedSong.id) {
+    this.emit('find', selectedSong, answers.song)
   }
 })
 // 在歌曲被找到后，在它回调里面触发下载事件
 emitter.on('afterFind', function ({ song, res, findName }) {
-  if (res[0] && res[0].url) {
-    this.emit('download', {
-      song,
-      res: res[0],
-      findName,
-    })
+  if (!res[0] || !res[0].url) {
+    console.log(`没查找到 ${findName} 的相关下载资源`)
+    return process.exit(1)
   }
+  this.emit('download', {
+    song,
+    findMusic: res[0],
+    findName,
+  })
 })
+// 下载结束
+emitter.on('downloadEnd', function () {
+  console.log('下载结束')
+  process.exit()
+})
+
 // 这里的 handler 精简了多个事件的判断
 // 为不同的事件增加了不同的触发回调
 emitter.on('handler', function (key, res, ...args) {

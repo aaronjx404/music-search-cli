@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/arronliang/music-search-cli#readme",
   "dependencies": {
+    "cli-progress": "^3.9.0",
     "inquirer": "^8.0.0"
   }
 }
